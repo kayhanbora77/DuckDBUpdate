@@ -1,0 +1,22 @@
+⏰ Start Time: 2025-12-16 22:13:25
+✅ Helper macros created
+🔄 Processing data with SQL...
+Traceback (most recent call last):
+  File "/home/kayhan/Coding/DuckDBUpdate_Single_kb1/optimized_cloude.py", line 120, in <module>
+    con.execute(f"""
+    ~~~~~~~~~~~^^^^^
+    INSERT INTO {TARGET_TABLE}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<177 lines>...
+    FROM pivoted
+    ^^^^^^^^^^^^
+    """)
+    ^^^^
+_duckdb.OutOfMemoryException: Out of Memory Error: could not allocate block of size 256.0 KiB (7.4 GiB/7.4 GiB used)
+
+Possible solutions:
+* Reducing the number of threads (SET threads=X)
+* Disabling insertion-order preservation (SET preserve_insertion_order=false)
+* Increasing the memory limit (SET memory_limit='...GB')
+
+See also https://duckdb.org/docs/stable/guides/performance/how_to_tune_workloads
