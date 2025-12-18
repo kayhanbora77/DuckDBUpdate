@@ -130,45 +130,51 @@ while offset < total_rows:
     )
 
     # Create temp table for this batch
-    con.execute(f"DROP TABLE IF EXISTS {TEMP_TABLE}")
+    # con.execute(f"DROP TABLE IF EXISTS {TEMP_TABLE}")
 
-    con.execute(f"""
-    CREATE TABLE {TEMP_TABLE} AS
-    SELECT * FROM {SOURCE_TABLE}
-    LIMIT {BATCH_SIZE} OFFSET {offset}
-    """)
+    # con.execute(f"""
+    # CREATE TABLE {TEMP_TABLE} AS
+    # SELECT * FROM {SOURCE_TABLE}
+    # LIMIT {BATCH_SIZE} OFFSET {offset}
+    # """)
     # Process this batch
     con.execute(f"""
     INSERT INTO {TARGET_TABLE}
-    WITH unpivoted AS (
+
+    WITH src AS (
+        SELECT *
+        FROM TBO3_MASTER
+        WHERE rowid BETWEEN {offset} AND {offset + BATCH_SIZE}
+    ),
+    unpivoted AS (
         SELECT PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
                FlightNumber1 as FlightNumber, DepartureDateLocal1 as DepartureDate,
                Airport1 as DepAir, Airport2 as ArrAir, 1 as OriginalSeq
-        FROM {TEMP_TABLE} WHERE NULLIF(TRIM(COALESCE(FlightNumber1, '')), '') != ''
+        FROM src WHERE FlightNumber1 IS NOT NULL AND TRIM(FlightNumber1) <> ''
         UNION ALL
         SELECT PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
                FlightNumber2, DepartureDateLocal2, Airport2, Airport3, 2
-        FROM {TEMP_TABLE} WHERE NULLIF(TRIM(COALESCE(FlightNumber2, '')), '') != ''
+        FROM src WHERE FlightNumber2 IS NOT NULL AND TRIM(FlightNumber2) <> ''
         UNION ALL
         SELECT PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
                FlightNumber3, DepartureDateLocal3, Airport3, Airport4, 3
-        FROM {TEMP_TABLE} WHERE NULLIF(TRIM(COALESCE(FlightNumber3, '')), '') != ''
+        FROM src WHERE FlightNumber3 IS NOT NULL AND TRIM(FlightNumber3) <> ''
         UNION ALL
         SELECT PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
                FlightNumber4, DepartureDateLocal4, Airport4, Airport5, 4
-        FROM {TEMP_TABLE} WHERE NULLIF(TRIM(COALESCE(FlightNumber4, '')), '') != ''
+        FROM src WHERE FlightNumber4 IS NOT NULL AND TRIM(FlightNumber4) <> ''
         UNION ALL
         SELECT PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
                FlightNumber5, DepartureDateLocal5, Airport5, Airport6, 5
-        FROM {TEMP_TABLE} WHERE NULLIF(TRIM(COALESCE(FlightNumber5, '')), '') != ''
+        FROM src WHERE FlightNumber5 IS NOT NULL AND TRIM(FlightNumber5) <> ''
         UNION ALL
         SELECT PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
                FlightNumber6, DepartureDateLocal6, Airport6, Airport7, 6
-        FROM {TEMP_TABLE} WHERE NULLIF(TRIM(COALESCE(FlightNumber6, '')), '') != ''
+        FROM src WHERE FlightNumber6 IS NOT NULL AND TRIM(FlightNumber6) <> ''
         UNION ALL
         SELECT PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
                FlightNumber7, DepartureDateLocal7, Airport7, Airport8, 7
-        FROM {TEMP_TABLE} WHERE NULLIF(TRIM(COALESCE(FlightNumber7, '')), '') != ''
+        FROM src WHERE FlightNumber7 IS NOT NULL AND TRIM(FlightNumber7) <> ''
     ),
     cleaned AS (
         SELECT
