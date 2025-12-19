@@ -1,6 +1,7 @@
-import duckdb
-from pathlib import Path
 import time
+from pathlib import Path
+
+import duckdb
 
 # --------------------------------------------------
 # CONFIG
@@ -25,6 +26,7 @@ con = duckdb.connect(DB_PATH)
 con.execute("SET threads TO 4")  # Reduced threads
 con.execute("SET memory_limit = '6GB'")  # Leave some headroom
 con.execute("SET preserve_insertion_order = false")  # Save memory
+con.execute("SET temp_directory='/tmp/duckdb_temp'")
 
 start_time = time.time()
 print(
@@ -112,7 +114,8 @@ print("✅ Helper macros created")
 # --------------------------------------------------
 # GET TOTAL COUNT
 # --------------------------------------------------
-total_rows = con.execute(f"SELECT COUNT(*) FROM {SOURCE_TABLE}").fetchone()[0]
+result = con.execute(f"SELECT COUNT(*) FROM {SOURCE_TABLE}").fetchone()
+total_rows = result[0] if result is not None else 0
 print(f"📊 Total source records: {total_rows:,}")
 
 # --------------------------------------------------
@@ -133,7 +136,8 @@ while offset < total_rows:
     WITH src AS (
         SELECT *
         FROM TBO3_MASTER
-        WHERE rowid BETWEEN {offset} AND {offset + BATCH_SIZE}
+        WHERE rowid >= {offset}
+        AND rowid < {offset + BATCH_SIZE}
     ),
     unpivoted AS (
         SELECT PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
@@ -166,15 +170,19 @@ while offset < total_rows:
         FROM src WHERE FlightNumber7 IS NOT NULL AND TRIM(FlightNumber7) <> ''
     ),
     cleaned AS (
-        SELECT
-            PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
-            normalize_flight(FlightNumber) AS clean_flt,
-            normalize_date(DepartureDate) AS clean_dte,
-            DepAir, ArrAir, OriginalSeq
-        FROM unpivoted
-        WHERE normalize_flight(FlightNumber) IS NOT NULL
-          AND normalize_date(DepartureDate) IS NOT NULL
-          AND NOT is_rnk(FlightNumber)
+    SELECT
+        PaxName, BookingRef, ETicketNo, ClientCode, Airline, JourneyType,
+        normalize_flight(FlightNumber) AS clean_flt,
+        normalize_date(DepartureDate) AS clean_dte,
+        DepAir, ArrAir, OriginalSeq
+    FROM unpivoted
+    ),
+    filtered AS (
+        SELECT *
+        FROM cleaned
+        WHERE clean_flt IS NOT NULL
+            AND clean_dte IS NOT NULL
+            AND NOT is_rnk(clean_flt)
     ),
     -- 🔹 STEP 1: Deduplicate by EXACT timestamp
     deduped AS (
@@ -186,7 +194,7 @@ while offset < total_rows:
                     clean_dte
                 ORDER BY OriginalSeq
             ) AS rn_timestamp
-        FROM cleaned
+        FROM filtered
     ),
     kept_after_dedup AS (
         SELECT * FROM deduped WHERE rn_timestamp = 1
@@ -277,7 +285,6 @@ while offset < total_rows:
     batch_count = result[0] if result is not None else 0
     rows_added = batch_count - total_inserted
     total_inserted = batch_count
-
     print(
         f"✅ Batch {batch_num} complete. Added {rows_added:,} rows. Total: {total_inserted:,}"
     )
