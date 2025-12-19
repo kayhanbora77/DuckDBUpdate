@@ -11,7 +11,6 @@ DB_PATH = DATABASE_DIR / DATABASE_NAME
 
 SOURCE_TABLE = "TBO3_MASTER"
 TARGET_TABLE = "TBO3_MASTER_TARGET"
-TEMP_TABLE = "TBO3_MASTER_TEMP"
 BATCH_SIZE = 500_000  # Process 500k records at a time
 
 VALID_YEAR_MIN = 1990
@@ -128,16 +127,6 @@ while offset < total_rows:
     print(
         f"🔄 Processing batch {batch_num} (rows {offset:,} to {offset + BATCH_SIZE:,})..."
     )
-
-    # Create temp table for this batch
-    # con.execute(f"DROP TABLE IF EXISTS {TEMP_TABLE}")
-
-    # con.execute(f"""
-    # CREATE TABLE {TEMP_TABLE} AS
-    # SELECT * FROM {SOURCE_TABLE}
-    # LIMIT {BATCH_SIZE} OFFSET {offset}
-    # """)
-    # Process this batch
     con.execute(f"""
     INSERT INTO {TARGET_TABLE}
 
@@ -294,9 +283,6 @@ while offset < total_rows:
     )
 
     offset += BATCH_SIZE
-
-# Cleanup
-con.execute(f"DROP TABLE IF EXISTS {TEMP_TABLE}")
 
 # Calculate execution time
 elapsed_time = time.time() - start_time
