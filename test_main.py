@@ -97,7 +97,7 @@ def create_macros(con: duckdb.DuckDBPyConnection) -> None:
         CREATE OR REPLACE MACRO is_rnk(flight) AS (
             CASE
                 WHEN flight IS NULL THEN FALSE
-                WHEN RIGHT(TRIM(flight), 3) = '000' THEN TRUE
+                WHEN regexp_matches(UPPER(TRIM(flight)), '^[A-Z][A-Z0-9]*0{3,}$') THEN TRUE
                 ELSE FALSE
             END
         )
