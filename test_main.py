@@ -49,7 +49,7 @@ def connect_db() -> duckdb.DuckDBPyConnection:
 # ==================================================
 # SCHEMA & MACROS
 # ==================================================
-def recreate_target_table(con: duckdb.DuckDBPyConnection) -> None:
+def create_target_table(con: duckdb.DuckDBPyConnection) -> None:
     log("♻️ Recreating target table")
 
     con.execute(f"DROP TABLE IF EXISTS {TARGET_TABLE}")
@@ -309,7 +309,7 @@ def main() -> None:
 
     con = connect_db()
 
-    recreate_target_table(con)
+    create_target_table(con)
     create_macros(con)
 
     total_rows = get_total_rows(con)
