@@ -100,12 +100,15 @@ def create_macros(con: duckdb.DuckDBPyConnection) -> None:
         CREATE OR REPLACE MACRO normalize_flight(flight) AS (
             CASE
                 WHEN flight IS NULL THEN NULL
-                WHEN regexp_matches(UPPER(TRIM(flight)), '^([A-Z]{2,3})(0*)([0-9]+)$')
-                    THEN regexp_replace(
-                        UPPER(TRIM(flight)),
-                        '^([A-Z]{2,3})0+([0-9]+)$',
+                -- airline code (2–3 letters) + optional space + digits
+                WHEN regexp_matches(UPPER(TRIM(flight)), '^[A-Z]{2,3}\s*[0-9]+$')
+                THEN
+                    regexp_replace(
+                        regexp_replace(UPPER(TRIM(flight)), '\s+', ''),  -- remove spaces
+                        '^([A-Z]{2,3})0+([0-9]+)$',                       -- drop leading zeros
                         '\\1\\2'
                     )
+
                 ELSE UPPER(TRIM(flight))
             END
         )
@@ -252,7 +255,7 @@ pivoted AS (
     SELECT
         "Pax Name",
         "PNR CRS",
-	    ANY_VALUE("PNR Airline")  AS "PNR Airline",
+        ANY_VALUE("PNR Airline")  AS "PNR Airline",
 		ANY_VALUE(Airlines)        AS Airlines,
 		ANY_VALUE("Ticket Number") AS "Ticket Number",
         MAX(CASE WHEN seq_id = 1 THEN clean_flt END) AS S1FltNo,
@@ -281,7 +284,7 @@ SELECT
     "Pax Name",
     "PNR CRS",
     "PNR Airline",
- 	Airlines,
+    Airlines,
 	"Ticket Number",
     S1FltNo, S2FltNo, S3FltNo, S4FltNo, S5FltNo, S6FltNo,
     S1Date, S2Date, S3Date,S4Date, S5Date, S6Date,
