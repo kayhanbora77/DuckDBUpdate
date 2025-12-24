@@ -230,6 +230,7 @@ def process_batch(con: duckdb.DuckDBPyConnection, offset: int, limit: int) -> No
                 SUM(
                     CASE
                         WHEN prev_dte IS NULL THEN 1
+                        WHEN clean_dte < prev_dte THEN 1
                         WHEN EXTRACT(EPOCH FROM (clean_dte - prev_dte)) > 36 * 3600 THEN 1
                         ELSE 0
                     END
