@@ -210,7 +210,7 @@ filtered AS (
 deduped AS (
     SELECT *,
         ROW_NUMBER() OVER (
-            PARTITION BY "Pax Name", "PNR CRS", "Ticket Number",clean_dte
+            PARTITION BY "Pax Name", "PNR CRS", clean_dte
             ORDER BY Segment
         ) AS rn
     FROM filtered
@@ -218,7 +218,7 @@ deduped AS (
 with_prev AS (
     SELECT *,
         LAG(clean_dte) OVER (
-            PARTITION BY "Pax Name", "PNR CRS","Ticket Number"
+            PARTITION BY "Pax Name", "PNR CRS"
              ORDER BY clean_dte, Segment
         ) AS prev_dte
     FROM deduped
@@ -234,7 +234,7 @@ with_trip_id AS (
                 ELSE 0
             END
         ) OVER (
-            PARTITION BY "Pax Name", "PNR CRS", "Ticket Number"
+            PARTITION BY "Pax Name", "PNR CRS"
             ORDER BY clean_dte, Segment
             ROWS UNBOUNDED PRECEDING
         ) AS trip_id
@@ -243,7 +243,7 @@ with_trip_id AS (
 sequenced AS (
     SELECT *,
         ROW_NUMBER() OVER (
-            PARTITION BY "Pax Name", "PNR CRS","Ticket Number", trip_id
+            PARTITION BY "Pax Name", "PNR CRS", trip_id
             ORDER BY clean_dte, Segment
         ) AS seq_id
     FROM with_trip_id
@@ -275,7 +275,7 @@ pivoted AS (
         MAX(CASE WHEN seq_id = 5 THEN ArrAir END) AS "Airport 6",
         MAX(CASE WHEN seq_id = 6 THEN ArrAir END) AS "Airport 7"
     FROM sequenced
-    GROUP BY "Pax Name", "PNR CRS", "Ticket Number", trip_id
+    GROUP BY "Pax Name", "PNR CRS", trip_id
 )
 SELECT
     "Pax Name",
