@@ -12,6 +12,7 @@ DB_PATH = DATABASE_DIR / DATABASE_NAME
 
 SOURCE_TABLE = "TA_MASTER"
 TARGET_TABLE = "TA_MASTER_TARGET"
+FINAL_MASTER_TABLE = "TA_MASTER_FINAL"
 
 BATCH_SIZE = 500_000
 
@@ -101,10 +102,10 @@ def create_macros(con: duckdb.DuckDBPyConnection) -> None:
             CASE
                 WHEN flight IS NULL THEN NULL
                 -- airline code (2–3 letters) + optional space + digits
-                WHEN regexp_matches(UPPER(TRIM(flight)), '^[A-Z]{2,3}\s*[0-9]+$')
+                WHEN regexp_matches(UPPER(TRIM(flight)), '^[A-Z]{2,3}\\s*[0-9]+$')
                 THEN
                     regexp_replace(
-                        regexp_replace(UPPER(TRIM(flight)), '\s+', ''),  -- remove spaces
+                        regexp_replace(UPPER(TRIM(flight)), '\\s+', ''),  -- remove spaces
                         '^([A-Z]{2,3})0+([0-9]+)$',                       -- drop leading zeros
                         '\\1\\2'
                     )
@@ -294,11 +295,106 @@ FROM pivoted
     """)
 
 
+def seperate_flights_by_airports(con: duckdb.DuckDBPyConnection) -> None:
+    log("🔀 Creating final master table with separated flights by airports")
+    con.execute(f"DROP TABLE IF EXISTS {FINAL_MASTER_TABLE}")
+
+    con.execute("""
+    CREATE TABLE TA_MASTER_FINAL AS
+    WITH base AS (
+        SELECT *
+        FROM TA_MASTER_TARGET
+    ),
+    to_split AS (
+        SELECT *
+        FROM base
+        WHERE "Airport1" IS NOT NULL
+        AND "Airport2" IS NOT NULL
+        AND "Airport3" IS NOT NULL
+    ),
+    not_split AS (
+        SELECT *
+        FROM base
+        WHERE NOT (
+            "Airport1" IS NOT NULL
+            AND "Airport2" IS NOT NULL
+            AND "Airport3" IS NOT NULL
+        )
+    ),
+    -- -------- LEG 1 --------
+    leg1 AS (
+        SELECT
+            "Pax Name",
+            "PNR CRS",
+            "PNR Airline",
+            "Airlines",
+            "Ticket Number",
+            "S1FltNo" AS "S1FltNo",
+            NULL AS "S2FltNo",
+            NULL AS "S3FltNo",
+            NULL AS "S4FltNo",
+            NULL AS "S5FltNo",
+            NULL AS "S6FltNo",
+            "S1Date" AS "S1Date",
+            NULL AS "S2Date",
+            NULL AS "S3Date",
+            NULL AS "S4Date",
+            NULL AS "S5Date",
+            NULL AS "S6Date",
+            "Airport1" AS "Airport1",
+            "Airport2" AS "Airport2",
+            NULL AS "Airport3",
+            NULL AS "Airport4",
+            NULL AS "Airport5",
+            NULL AS "Airport6",
+            NULL AS "Airport7"
+        FROM to_split
+    ),
+    -- -------- LEG 2 --------
+    leg2 AS (
+        SELECT
+            "Pax Name",
+            "PNR CRS",
+            "PNR Airline",
+            "Airlines",
+            "Ticket Number",
+            "S2FltNo" AS "S1FltNo",
+            NULL AS "S2FltNo",
+            NULL AS "S3FltNo",
+            NULL AS "S4FltNo",
+            NULL AS "S5FltNo",
+            NULL AS "S6FltNo",
+            "S2Date" AS "S1Date",
+            NULL AS "S2Date",
+            NULL AS "S3Date",
+            NULL AS "S4Date",
+            NULL AS "S5Date",
+            NULL AS "S6Date",
+            "Airport2" AS "Airport1",
+            "Airport3" AS "Airport2",
+            NULL AS "Airport3",
+            NULL AS "Airport4",
+            NULL AS "Airport5",
+            NULL AS "Airport6",
+            NULL AS "Airport7"
+        FROM to_split
+    )
+    -- -------- FINAL RESULT --------
+    SELECT * FROM not_split
+    UNION ALL
+    SELECT * FROM leg1
+    UNION ALL
+    SELECT * FROM leg2;
+    """)
+
+
 def main() -> None:
     start = time.time()
     log(f"⏰ ETL started at {now_str()}")
 
     con = connect_db()
+    # seperate_flights_by_airports(con)
+
     create_target_table(con)
     total_rows = get_total_rows(con)
     log(f"📊 Source rows: {total_rows:,}")
