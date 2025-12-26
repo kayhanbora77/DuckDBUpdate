@@ -393,6 +393,7 @@ def main() -> None:
     log(f"⏰ ETL started at {now_str()}")
 
     con = connect_db()
+    # first run below code. Than run seperate_flights_by_airports
     # seperate_flights_by_airports(con)
 
     create_target_table(con)
