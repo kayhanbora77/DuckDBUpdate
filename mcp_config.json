@@ -1,0 +1,57 @@
+{
+    "mcpServers": {
+        "context7": {
+            "serverUrl": "https://mcp.context7.com/mcp",
+            "headers": {
+                "CONTEXT7_API_KEY": "ctx7sk-b1b2629e-73fb-4413-baa3-737566159862"
+            }
+        },
+        "deepwiki": {
+            "serverUrl": "https://mcp.deepwiki.com/sse"
+        },
+        "exa": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "exa-mcp-server"
+            ],
+            "env": {
+                "EXA_API_KEY": "dfcaa615-a1e2-4b3c-92a8-d26326f54737"
+            }
+        },
+        "wcgw": {
+            "command": "uvx",
+            "args": [
+                "wcgw@latest"
+            ]
+        },
+        "MCP SQLite Server": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "mcp-sqlite",
+                "<path-to-your-sqlite-database.db>"
+            ]
+        },
+        "ref": {
+            "type": "http",
+            "url": "https://api.ref.tools/mcp?apiKey=ref-5cad7aee7abc9a9ed92a"
+        },
+        "playwright": {
+            "command": "npx",
+            "args": [
+                "@playwright/mcp@latest"
+            ]
+        },
+        "firecrawl-mcp": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "firecrawl-mcp"
+            ],
+            "env": {
+                "FIRECRAWL_API_KEY": "fc-d7e5a35d915948ff9f09d2fed09e81d0"
+            }
+        }
+    }
+}
